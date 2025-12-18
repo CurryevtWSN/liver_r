@@ -8,7 +8,7 @@ import shap
 import sklearn
 import joblib
 from tabpfn import TabPFNClassifier
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+#from#from sklearn.metrics import confusion_matrix, ConfusionMatrixDi
 #import#im
 #os.#os.chdir(r"D:\data_analysis\machine_learning\肝癌肝移植\肝癌肝
 
@@ -45,7 +45,6 @@ Preoperative_AFP = st.sidebar.slider(
     "Preoperative_AFP", 0.0, 10000.0, value=10.0, step=0.1, format="%.1f"
 )
 
-# 下面这些范围/步长/小数位：请按 train.csv 的 min/max/小数位自行替换
 Preoperative_GGT = st.sidebar.slider(
     "Preoperative_GGT", 0.0, 2000.0, value=50.0, step=0.1, format="%.1f"
 )
@@ -148,6 +147,7 @@ if st.button('Predict'):
     st.markdown(
         '## Probability of Recurrence Risk: ' + str(prob) + '%'
     )
+
 
 
 
