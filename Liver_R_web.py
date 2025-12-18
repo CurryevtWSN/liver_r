@@ -9,8 +9,8 @@ import sklearn
 import joblib
 from tabpfn import TabPFNClassifier
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-import os
-os.chdir(r"D:\data_analysis\machine_learning\肝癌肝移植\肝癌肝移植")
+#import#im
+#os.#os.chdir(r"D:\data_analysis\machine_learning\肝癌肝移植\肝癌肝
 
 
 #%%不提示warning信息
@@ -148,6 +148,7 @@ if st.button('Predict'):
     st.markdown(
         '## Probability of Recurrence Risk: ' + str(prob) + '%'
     )
+
 
 
 
