@@ -1,24 +1,26 @@
-#%% load package
-import os
+#%%load package
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 import seaborn as sns
+import shap
+import sklearn
+import joblib
 from tabpfn import TabPFNClassifier
-
-# ✅ 必须尽量放在最前面
-st.set_page_config(
-    page_title='Interpretable Prediction of Post-Transplant Recurrence in Hepatocellular Carcinoma Using TabPFN and SHAP'
-)
-
-# 如需切换工作目录（建议用绝对路径或用 __file__ 更稳）
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import os
 os.chdir(r"D:\data_analysis\machine_learning\肝癌肝移植\肝癌肝移植")
 
-#%% title
+
+#%%不提示warning信息
+# st.set_option('deprecation.showPyplotGlobalUse', False)
+
+#%%set title
+st.set_page_config(page_title='Interpretable Prediction of Post-Transplant Recurrence in Hepatocellular Carcinoma Using TabPFN and SHAP')
 st.title('Interpretable Prediction of Post-Transplant Recurrence in Hepatocellular Carcinoma Using TabPFN and SHAP')
 
-#%% sidebar inputs
+#%%set variTabPFNles selection
 st.sidebar.markdown('## Variables')
 
 Age = st.sidebar.slider("Age (year)", 0, 100, value=65, step=1)
@@ -43,6 +45,7 @@ Preoperative_AFP = st.sidebar.slider(
     "Preoperative_AFP", 0.0, 10000.0, value=10.0, step=0.1, format="%.1f"
 )
 
+# 下面这些范围/步长/小数位：请按 train.csv 的 min/max/小数位自行替换
 Preoperative_GGT = st.sidebar.slider(
     "Preoperative_GGT", 0.0, 2000.0, value=50.0, step=0.1, format="%.1f"
 )
@@ -75,70 +78,76 @@ Preoperative_HBsAg = st.sidebar.slider(
     "Preoperative_HBsAg", 0.0, 6000.0, value=0.0, step=0.1, format="%.1f"
 )
 
+
+
+#分割符号
 st.sidebar.markdown('#  ')
 st.sidebar.markdown('#  ')
-st.sidebar.markdown('##### All rights reserved')
+st.sidebar.markdown('##### All rights reserved') 
+# st.sidebar.markdown('##### For communication and cooperation, please contact wshinana99@163.com, Shi-Nan Wu, Xiamen University')
+#传入数据
+map = {'No':0,
+       'Yes':1}
 
-#%% encode categorical
-yesno_map = {'No': 0, 'Yes': 1}
-Portal_Hepatic_Vein_Tumor_Thrombus = yesno_map[Portal_Hepatic_Vein_Tumor_Thrombus]
+Portal_Hepatic_Vein_Tumor_Thrombus =map[Portal_Hepatic_Vein_Tumor_Thrombus]
 
-#%% load model & data
-data_train = pd.read_csv('train.csv')
 
-# data = data_train
-features = ["Maximum_Tumor_Diameter","Preoperative_AFP","Preoperative_BCLC_Stage","Preoperative_GGT",
-            "Preoperative_Tumor_Number","Preoperative_ALB","Portal_Hepatic_Vein_Tumor_Thrombus",
-            "Preoperative_TB","Preoperative_NLR","Preoperative_INR","Preoperative_Neutrophil",
-            "Preoperative_Lymphocyte","Age","Preoperative_HBsAg"]
+# 数据读取，特征标注
+#%%load model
+TabPFN_model = joblib.load('TabPFN_model.pkl')
 
-indicator = ["Recurrence"]
+#%%load data
+hp_train = pd.read_csv('train.csv')
 
-X_train = data_train[features]
-y_train= data_train[indicator]
-
-X_train = X_train.values
-y_train = y_train.values
-
-TabPFN = TabPFNClassifier(model_path = "tabpfn-v2-classifier.ckpt")
-TabPFN_model = TabPFN.fit(X_train, y_train)
-
-hp_train = pd.read_csv('train.csv')  # 你后面暂时没用到，可以保留
-
-#%% prediction input
-X_input = np.array([[
-    Age,
-    Portal_Hepatic_Vein_Tumor_Thrombus,
-    Preoperative_BCLC_Stage,
-    Preoperative_Tumor_Number,
-    Maximum_Tumor_Diameter,
-    Preoperative_AFP,
-    Preoperative_GGT,
-    Preoperative_ALB,
-    Preoperative_TB,
-    Preoperative_NLR,
-    Preoperative_INR,
-    Preoperative_Neutrophil,
-    Preoperative_Lymphocyte,
-    Preoperative_HBsAg
-]])
-
-# 阈值
+target = ["Recurrence"]
+y = np.array(hp_train[target])
 sp = 0.5
 
-# ✅ 只算一次 predict_proba
-proba_high = TabPFN_model.predict_proba(X_input)[0][1]
-is_t = proba_high > sp
-prob = (proba_high * 1000) // 1 / 10  # 保留你原来的“保留1位小数”的写法
+is_t = (TabPFN_model.predict_proba(np.array([[Age,
+            Portal_Hepatic_Vein_Tumor_Thrombus,
+            Preoperative_BCLC_Stage,
+            Preoperative_Tumor_Number,
+            Maximum_Tumor_Diameter,
+            Preoperative_AFP,
+            Preoperative_GGT,
+            Preoperative_ALB,
+            Preoperative_TB,
+            Preoperative_NLR,
+            Preoperative_INR,
+            Preoperative_Neutrophil,
+            Preoperative_Lymphocyte,
+            Preoperative_HBsAg]]))[0][1])> sp
+prob = (TabPFN_model.predict_proba(np.array([[Age,
+            Portal_Hepatic_Vein_Tumor_Thrombus,
+            Preoperative_BCLC_Stage,
+            Preoperative_Tumor_Number,
+            Maximum_Tumor_Diameter,
+            Preoperative_AFP,
+            Preoperative_GGT,
+            Preoperative_ALB,
+            Preoperative_TB,
+            Preoperative_NLR,
+            Preoperative_INR,
+            Preoperative_Neutrophil,
+            Preoperative_Lymphocyte,
+            Preoperative_HBsAg]]))[0][1])*1000//1/10
+    
 
-result = 'High Risk Recurrence Group' if is_t else 'Low Risk Recurrence Group'
-
-#%% UI action
 if st.button('Predict'):
+    if is_t:
+        result = 'High Risk Recurrence Group'
+    else:
+        result = 'Low Risk Recurrence Group'
+
     st.markdown('## Result: ' + result)
 
-    # ✅ Low Risk 出气球
+    # 低风险时放气球
     if result == 'Low Risk Recurrence Group':
         st.balloons()
 
-    st.markdown('## Probability of High Risk Recurrence Group: ' + str(prob) + '%')
+    st.markdown(
+        '## Probability of Recurrence Risk: ' + str(prob) + '%'
+    )
+
+
+
